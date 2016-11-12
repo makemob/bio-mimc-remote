@@ -20,6 +20,7 @@ public class ClientNetworkManager : MonoBehaviour
 
 	public NetworkManager m_networkManager;
 	public Text m_statusText;
+	public Text m_debugText;
 	public InputField m_addressInput;
 
 	private UKIStatus m_status;
@@ -64,7 +65,7 @@ public class ClientNetworkManager : MonoBehaviour
 		if (toggle.isOn)
 		{
 			int mode = int.Parse(Regex.Match(toggle.name, @"\d+").Value);
-			Debug.Log("UISetMode " + mode);
+			//Debug.Log("UISetMode " + mode);
 			if (m_connection != null)
 				m_connection.CmdSetUKIMode(mode);
 		}
@@ -74,7 +75,7 @@ public class ClientNetworkManager : MonoBehaviour
 	public void UISetSpeed(Slider slider)
 	{
 		float speed = slider.value;	// 0.0 -> 1.0
-		Debug.Log("UISetSpeed " + speed);
+		//Debug.Log("UISetSpeed " + speed);
 		if (m_connection != null)
 			m_connection.CmdSetUKISpeed(speed);
 	}
@@ -95,6 +96,22 @@ public class ClientNetworkManager : MonoBehaviour
 		// trigger a new connection attempt
 		m_lastConnected = true;
 	}
+
+
+	private static int count;
+	public void OnReceiveStatusFromServer(UKIStatus status)
+	{
+		m_debugText.text = string.Format(
+			"this netId: {0}\n" +
+			"packets from server: {1}\n" +
+			"UKI status: netId={2} mode={3} speed={4:0.00}",
+			m_connection != null ? (int)m_connection.netId.Value : -1,
+			++count,
+			status.netId,
+			status.mode,
+			status.speed);
+	}
+
 
 	private void Update()
 	{
