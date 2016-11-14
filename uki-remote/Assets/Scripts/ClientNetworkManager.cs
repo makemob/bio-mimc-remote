@@ -9,8 +9,10 @@ using System.Text.RegularExpressions;
 public struct UKIStatus
 {
 	public uint netId;     // netId of client that last changed UKIStatus
-	public int mode;
-	public float speed;
+	public int legMode;
+	public float legSpeed;
+	public int wingMode;
+	public float wingSpeed;
 }
 
 
@@ -23,10 +25,19 @@ public class ClientNetworkManager : MonoBehaviour
 	public Text m_debugText;
 	public InputField m_addressInput;
 
+	public Toggle m_legMode0;
+	public Toggle m_legMode1;
+	public Toggle m_legMode2;
+	public Toggle m_legMode3;
+	public Toggle m_wingMode0;
+	public Toggle m_wingMode1;
+	public Toggle m_wingMode2;
+
 	private UKIStatus m_status;
 	private bool m_lastConnected = true;
 	private Connection m_connection;
 	private float m_offlineTime;
+	private float m_timeSinceLastContact;
 
 
 	private void Awake()
@@ -60,24 +71,45 @@ public class ClientNetworkManager : MonoBehaviour
 
 
 	// callback for UI
-	public void UISetMode(Toggle toggle)
+	public void UISetLegMode(Toggle toggle)
 	{
 		if (toggle.isOn)
 		{
 			int mode = int.Parse(Regex.Match(toggle.name, @"\d+").Value);
-			//Debug.Log("UISetMode " + mode);
+			//Debug.Log("UISetLegMode " + mode);
 			if (m_connection != null)
-				m_connection.CmdSetUKIMode(mode);
+				m_connection.CmdSetUKILegMode(mode);
 		}
 	}
 
 	// callback for UI
-	public void UISetSpeed(Slider slider)
+	public void UISetLegSpeed(Slider slider)
 	{
 		float speed = slider.value;	// 0.0 -> 1.0
-		//Debug.Log("UISetSpeed " + speed);
+		//Debug.Log("UISetLegSpeed " + speed);
 		if (m_connection != null)
-			m_connection.CmdSetUKISpeed(speed);
+			m_connection.CmdSetUKILegSpeed(speed);
+	}
+
+	// callback for UI
+	public void UISetWingMode(Toggle toggle)
+	{
+		if (toggle.isOn)
+		{
+			int mode = int.Parse(Regex.Match(toggle.name, @"\d+").Value);
+			//Debug.Log("UISetWingMode " + mode);
+			if (m_connection != null)
+				m_connection.CmdSetUKIWingMode(mode);
+		}
+	}
+
+	// callback for UI
+	public void UISetWingSpeed(Slider slider)
+	{
+		float speed = slider.value; // 0.0 -> 1.0
+		//Debug.Log("UISetWingSpeed " + speed);
+		if (m_connection != null)
+			m_connection.CmdSetUKIWingSpeed(speed);
 	}
 
 	// callback for UI
@@ -99,17 +131,78 @@ public class ClientNetworkManager : MonoBehaviour
 
 
 	private static int count;
+	private static Toggle.ToggleEvent emptyToggleEvent = new Toggle.ToggleEvent();
+	//private static Slider.SliderEvent emptySliderEvent = new Slider.SliderEvent();
+
 	public void OnReceiveStatusFromServer(UKIStatus status)
 	{
+		int thisNetId = m_connection != null ? (int)m_connection.netId.Value : -1;
+
 		m_debugText.text = string.Format(
 			"this netId: {0}\n" +
 			"packets from server: {1}\n" +
-			"UKI status: netId={2} mode={3} speed={4:0.00}",
-			m_connection != null ? (int)m_connection.netId.Value : -1,
+			"UKI status: netId={2} legMode={3} legSpeed={4:0.00} wingMode={5} wingSpeed={6:0.00}",
+			thisNetId,
 			++count,
 			status.netId,
-			status.mode,
-			status.speed);
+			status.legMode,
+			status.legSpeed,
+			status.wingMode,
+			status.wingSpeed);
+
+		if (status.netId != thisNetId)
+		{
+			// UKI status has been set by a different client
+			// - adjust local settings to reflect actual status of UKI
+
+			Toggle toggle = null;
+			switch (status.legMode)
+			{
+				case 0: toggle = m_legMode0; break;
+				case 1: toggle = m_legMode1; break;
+				case 2: toggle = m_legMode2; break;
+				case 3: toggle = m_legMode3; break;
+			}
+
+			if (toggle != null)
+			{
+				var originalEvent = toggle.onValueChanged;
+				toggle.onValueChanged = emptyToggleEvent;
+				toggle.isOn = true;
+				toggle.onValueChanged = originalEvent;
+			}
+
+			toggle = null;
+			switch (status.wingMode)
+			{
+				case 0: toggle = m_wingMode0; break;
+				case 1: toggle = m_wingMode1; break;
+				case 2: toggle = m_wingMode2; break;
+			}
+
+			if (toggle != null)
+			{
+				var originalEvent = toggle.onValueChanged;
+				toggle.onValueChanged = emptyToggleEvent;
+				toggle.isOn = true;
+				toggle.onValueChanged = originalEvent;
+			}
+		}
+
+		m_timeSinceLastContact = 0.0f;
+	}
+
+
+	private void Reconnect()
+	{
+		// stop existing connection / stop trying to connect
+		m_networkManager.StopClient();
+
+		// trigger a new connection attempt
+		m_lastConnected = true;
+
+		// reset offline timer
+		m_offlineTime = 0.0f;
 	}
 
 
@@ -119,27 +212,28 @@ public class ClientNetworkManager : MonoBehaviour
 
 		if (isConnected)
 		{
+			if ((m_timeSinceLastContact += Time.unscaledDeltaTime) >= 5.0f)
+			{
+				// network manager thinks it's connected to server but no packets are being received - try reconnecting
+				Reconnect();
+				isConnected = false;
+			}
+
 			// reset timer
 			m_offlineTime = 0.0f;
 		}
-		else if ((m_offlineTime += Time.deltaTime) > 5.0f)	// if offline for more than 5 seconds
+		else if ((m_offlineTime += Time.unscaledDeltaTime) > 5.0f)
 		{
-			Debug.Log("timeout");
-
-			// stop trying to connect
-			m_networkManager.StopClient();
-
-			// trigger a new connection attempt
-			m_lastConnected = true;
-
-			m_offlineTime = 0.0f;
+			// offline for more than 5 seconds - try reconnecting
+			Reconnect();
 		}
 
 		// maintain a connection to the server
 		if (m_lastConnected && !isConnected)
 		{
 			// startup or lost connection
-			string text = string.Format("<color=#FF4747FF>Offline.</color>\nTrying to connect to {0}:{1}...", m_networkManager.networkAddress, m_networkManager.networkPort);
+			string text = string.Format("<color=#FF4747FF>Offline.</color>\nTrying to connect to {0}:{1}...",
+				m_networkManager.networkAddress, m_networkManager.networkPort);
 			Debug.Log(text);
 			m_statusText.text = text;
 
@@ -147,12 +241,23 @@ public class ClientNetworkManager : MonoBehaviour
 		}
 		else if (!m_lastConnected && isConnected)
 		{
-			string text = string.Format("<color=#00FF00FF>Online.</color>\nConnected to {0}:{1}", m_networkManager.networkAddress, m_networkManager.networkPort);
+			string text = string.Format("<color=#00FF00FF>Online.</color>\nConnected to {0}:{1}",
+				m_networkManager.networkAddress, m_networkManager.networkPort);
 			Debug.Log(text);
 			m_statusText.text = text;
 		}
 
 		m_lastConnected = isConnected;
+
+
+		if (Input.GetKeyDown(KeyCode.Escape))
+		{
+#if UNITY_EDITOR
+			UnityEditor.EditorApplication.isPlaying = false;
+#else
+			Application.Quit();
+#endif
+		}
 	}
 }
 

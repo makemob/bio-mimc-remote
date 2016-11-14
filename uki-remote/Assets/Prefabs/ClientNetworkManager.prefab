@@ -123,3 +123,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_networkManager: {fileID: 114000012511327576}
   m_statusText: {fileID: 0}
+  m_debugText: {fileID: 0}
+  m_addressInput: {fileID: 0}
+  m_legMode0: {fileID: 0}
+  m_legMode1: {fileID: 0}
+  m_legMode2: {fileID: 0}
+  m_legMode3: {fileID: 0}
+  m_wingMode0: {fileID: 0}
+  m_wingMode1: {fileID: 0}
+  m_wingMode2: {fileID: 0}

@@ -10,15 +10,19 @@ using UnityEngine.Networking;
 
 public class Connection : NetworkBehaviour
 {
-	[SyncVar]
-	public int m_fromServer;
+	//[SyncVar]
+	//public int m_fromServer;
 
 
 	// commands (client -> server) - code executed on server-side only
 	[Command]
-	public void CmdSetUKIMode(int mode) { }
+	public void CmdSetUKILegMode(int mode) { }
 	[Command]
-	public void CmdSetUKISpeed(float speed) { }
+	public void CmdSetUKIWingMode(int mode) { }
+	[Command]
+	public void CmdSetUKILegSpeed(float speed) { }
+	[Command]
+	public void CmdSetUKIWingSpeed(float speed) { }
 
 
 	// client rpcs (server -> client) - code executed on client-side only
