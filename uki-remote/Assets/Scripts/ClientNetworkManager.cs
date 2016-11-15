@@ -32,6 +32,8 @@ public class ClientNetworkManager : MonoBehaviour
 	public Toggle m_wingMode0;
 	public Toggle m_wingMode1;
 	public Toggle m_wingMode2;
+	public Toggle m_wingMode3;
+	public Toggle m_wingMode4;
 
 	private UKIStatus m_status;
 	private bool m_lastConnected = true;
@@ -178,6 +180,8 @@ public class ClientNetworkManager : MonoBehaviour
 				case 0: toggle = m_wingMode0; break;
 				case 1: toggle = m_wingMode1; break;
 				case 2: toggle = m_wingMode2; break;
+				case 3: toggle = m_wingMode3; break;
+				case 4: toggle = m_wingMode4; break;
 			}
 
 			if (toggle != null)
