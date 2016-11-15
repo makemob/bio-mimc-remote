@@ -143,7 +143,8 @@ public class ClientNetworkManager : MonoBehaviour
 		m_debugText.text = string.Format(
 			"this netId: {0}\n" +
 			"packets from server: {1}\n" +
-			"UKI status: netId={2} legMode={3} legSpeed={4:0.00} wingMode={5} wingSpeed={6:0.00}",
+			//"UKI status: netId={2} legMode={3} legSpeed={4:0.00} wingMode={5} wingSpeed={6:0.00}",
+			"UKI status: netId={2} legMode={3} wingMode={5}",
 			thisNetId,
 			++count,
 			status.netId,
